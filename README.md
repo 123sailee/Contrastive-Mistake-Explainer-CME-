@@ -23,8 +23,9 @@ Traditional explainable AI (XAI) methods focus on explaining **why models make p
 ### Installation
 
 ```bash
-# Clone or navigate to the project directory
-cd C:\Users\saile\Desktop\AICORRECTOR
+# Clone the repository
+git clone https://github.com/123sailee/Contrastive-Mistake-Explainer-CME-.git
+cd Contrastive-Mistake-Explainer-CME-
 
 # Install dependencies
 pip install -r requirements.txt
@@ -43,7 +44,7 @@ streamlit run src/streamlit_app.py
 ## 📁 Project Structure
 
 ```
-AICORRECTOR/
+Contrastive-Mistake-Explainer-CME-/
 ├── src/
 │   ├── streamlit_app.py        # Main Streamlit application
 │   ├── data_loader.py          # Dataset loading and preprocessing
@@ -128,7 +129,7 @@ If you use this work, please cite:
 ```
 Contrastive Mistake Explainer (CME): Learning What Models Should Have Seen
 2026
-GitHub: [Repository URL]
+GitHub: https://github.com/123sailee/Contrastive-Mistake-Explainer-CME-
 ```
 
 ## 🤝 Contributing
@@ -137,7 +138,7 @@ This is a research project. Contributions, suggestions, and feedback are welcome
 
 ## 📄 License
 
-[Your License Here]
+MIT License - see LICENSE file for details
 
 ---
 
