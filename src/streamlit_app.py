@@ -24,14 +24,14 @@ from cme_explainer import CMEExplainer
 # Main Streamlit Application
 def main():
     st.set_page_config(
-        page_title="Contrastive Mistake Explainer",
-        page_icon="🧠",
+        page_title="MedGuard AI - Clinical Decision Support",
+        page_icon="🏥",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
-    st.title("🧠 Contrastive Mistake Explainer (CME)")
-    st.markdown("*Learning What Models Should Have Seen - A Novel Approach to AI Explainability*")
+    st.title("🏥 MedGuard AI")
+    st.markdown("*AI-Powered Clinical Decision Support & Failure Prevention*")
     
     # Sidebar for model configuration
     st.sidebar.header("⚙️ Model Configuration")
@@ -53,15 +53,15 @@ def main():
         st.session_state.explainer = None
     
     # Main tabs
-    tab1, tab2, tab3 = st.tabs(["📊 Data & Training", "🔍 Mistake Analysis", "📈 Model Performance"])
+    tab1, tab2, tab3 = st.tabs(["📊 System Diagnostics", "🔍 Clinical Decision Analysis", "📈 Performance Metrics"])
     
     with tab1:
-        st.header("📊 Data Loading & Model Training")
+        st.header("📊 System Diagnostics")
         
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            if st.button("🚀 Load Heart Disease Dataset", type="primary"):
+            if st.button("🚀 Load Patient Dataset", type="primary"):
                 with st.spinner("Loading and preprocessing data..."):
                     try:
                         # Load and preprocess data
@@ -82,7 +82,7 @@ def main():
                         st.session_state.feature_descriptions = feature_descriptions
                         st.session_state.data_loaded = True
                         
-                        st.success("✅ Dataset loaded successfully!")
+                        st.success("✅ Patient dataset loaded successfully!")
                         st.info(f"📊 Dataset shape: {processed_data.shape}")
                         st.info(f"🎯 Training samples: {len(X_train)}, Test samples: {len(X_test)}")
                         
@@ -91,10 +91,10 @@ def main():
         
         with col2:
             if st.session_state.data_loaded:
-                st.subheader("📋 Dataset Preview")
+                st.subheader("📋 Patient Data Preview")
                 st.dataframe(st.session_state.raw_data.head())
                 
-                st.subheader("📊 Feature Statistics")
+                st.subheader("📊 Clinical Feature Statistics")
                 st.dataframe(st.session_state.processed_data.describe())
         
         # Model Training Section
@@ -105,7 +105,7 @@ def main():
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                if st.button("🎯 Train RandomForest Model", type="primary"):
+                if st.button("� Train Clinical Model", type="primary"):
                     with st.spinner("Training model..."):
                         try:
                             # Initialize trainer
@@ -149,7 +149,7 @@ def main():
                             st.session_state.explainer = explainer
                             st.session_state.model_trained = True
                             
-                            st.success("✅ Model trained successfully!")
+                            st.success("✅ Clinical model trained successfully!")
                             st.info(f"🎯 Model Accuracy: {trainer.accuracy:.3f}")
                             
                         except Exception as e:
@@ -157,7 +157,7 @@ def main():
             
             with col2:
                 if st.session_state.model_trained:
-                    st.subheader("📈 Training Results")
+                    st.subheader("📈 Diagnostic Results")
                     trainer = st.session_state.trainer
                     
                     col2a, col2b = st.columns(2)
@@ -169,10 +169,10 @@ def main():
                         st.metric("F1-Score", f"{trainer.f1:.3f}")
     
     with tab2:
-        st.header("🔍 Mistake Analysis & Contrastive Explanations")
+        st.header("🔍 Clinical Decision Analysis")
         
         if not st.session_state.model_trained:
-            st.warning("⚠️ Please train a model first in the 'Data & Training' tab.")
+            st.warning("⚠️ Please train a model first in the 'System Diagnostics' tab.")
         else:
             trainer = st.session_state.trainer
             explainer = st.session_state.explainer
@@ -186,20 +186,20 @@ def main():
             if len(mistakes) == 0:
                 st.success("🎉 No mistakes found! The model achieved perfect accuracy on the test set.")
             else:
-                st.info(f"🔍 Found {len(mistakes)} misclassified samples")
+                st.info(f"🔍 Found {len(mistakes)} diagnostic discrepancies")
                 
                 # Mistake selector
-                mistake_options = [f"Sample {i} (True: {m['true_label']}, Pred: {m['predicted_label']})" 
+                mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
                                  for i, m in enumerate(mistakes)]
                 
                 selected_mistake_idx = st.selectbox(
-                    "Select a mistake to analyze:",
+                    "Select a diagnostic discrepancy to analyze:",
                     range(len(mistake_options)),
                     format_func=lambda x: mistake_options[x]
                 )
                 
-                if st.button("🔬 Generate Contrastive Explanation", type="primary"):
-                    with st.spinner("Analyzing mistake and finding correction path..."):
+                if st.button("🔬 Generate Clinical Explanation", type="primary"):
+                    with st.spinner("Analyzing diagnostic discrepancy and finding correct decision path..."):
                         try:
                             mistake = mistakes[selected_mistake_idx]
                             
@@ -235,11 +235,11 @@ def main():
                                     correction = None
                             
                             if correction is None:
-                                st.error("❌ Could not find a suitable correction example.")
+                                st.error("❌ Could not find a suitable correct diagnostic example.")
                             else:
                                 try:
                                     # Generate contrastive explanation
-                                    st.info(f"🔍 Using correction example at index {correction['index']}")
+                                    st.info(f"🔍 Using correct diagnostic example at index {correction['index']}")
                                     X_correction = st.session_state.X_train.iloc[correction['index']].values.reshape(1, -1)
                                     
                                     # Get original feature values (use scaled values since we don't have original)
@@ -252,29 +252,29 @@ def main():
                                     )
                                     
                                     # Display results
-                                    st.success("✅ Contrastive explanation generated!")
+                                    st.success("✅ Clinical explanation generated!")
                                     
                                     # Summary section
-                                    st.subheader("📝 Explanation Summary")
+                                    st.subheader("📝 Clinical Analysis Summary")
                                     summary = explainer.get_explanation_summary(explanation)
                                     st.markdown(summary)
                                     
                                     # Visualization
-                                    st.subheader("📊 Contrastive Visualization")
+                                    st.subheader("📊 Diagnostic Comparison Visualization")
                                     fig = explainer.plot_contrastive_explanation(explanation)
                                     st.plotly_chart(fig, use_container_width=True)
                                     
                                     # Feature comparison table
-                                    st.subheader("🔍 Feature Comparison")
+                                    st.subheader("🔍 Clinical Feature Comparison")
                                     comparison_data = []
                                     for i, feat_name in enumerate(explanation['feature_names']):
                                         comparison_data.append({
                                             'Feature': feat_name,
-                                            'Mistake Value': f"{explanation['feature_values_mistake'][i]:.3f}",
-                                            'Correction Value': f"{explanation['feature_values_correction'][i]:.3f}",
-                                            'Mistake SHAP': f"{explanation['shap_mistake'][i]:.3f}",
-                                            'Correction SHAP': f"{explanation['shap_correction'][i]:.3f}",
-                                            'SHAP Delta': f"{explanation['shap_delta'][i]:.3f}"
+                                            'Incorrect Value': f"{explanation['feature_values_mistake'][i]:.3f}",
+                                            'Correct Value': f"{explanation['feature_values_correction'][i]:.3f}",
+                                            'Incorrect SHAP': f"{explanation['shap_mistake'][i]:.3f}",
+                                            'Correct SHAP': f"{explanation['shap_correction'][i]:.3f}",
+                                            'SHAP Difference': f"{explanation['shap_delta'][i]:.3f}"
                                         })
                                     
                                     comparison_df = pd.DataFrame(comparison_data)
@@ -289,10 +289,10 @@ def main():
                             st.error(f"❌ Error generating explanation: {str(e)}")
     
     with tab3:
-        st.header("📈 Model Performance Analysis")
+        st.header("📈 Performance Metrics")
         
         if not st.session_state.model_trained:
-            st.warning("⚠️ Please train a model first in the 'Data & Training' tab.")
+            st.warning("⚠️ Please train a model first in the 'System Diagnostics' tab.")
         else:
             trainer = st.session_state.trainer
             

@@ -1,22 +1,24 @@
-# Contrastive Mistake Explainer (CME)
+# MedGuard AI - Clinical Decision Support System
 
-**Learning What Models Should Have Seen - A Novel Approach to AI Explainability**
+**AI-Powered Clinical Decision Support & Failure Prevention**
 
-## 🎯 Research Problem
+*Built on Contrastive Mistake Explanation (CME) Technology*
 
-Traditional explainable AI (XAI) methods focus on explaining **why models make predictions**. But when a model makes a **mistake**, we need to understand:
+## 🎯 Clinical Challenge
 
-1. **What did the model focus on?** (Mistake path)
-2. **What SHOULD it have focused on?** (Correction path)
-3. **What's the difference?** (Contrastive delta)
+Traditional AI models in healthcare can make diagnostic errors that impact patient outcomes. MedGuard AI addresses this critical challenge by analyzing **why models make incorrect predictions** and providing **actionable insights for clinical decision support**:
 
-## 💡 Novel Contribution
+1. **What factors led to the misdiagnosis?** (Error analysis)
+2. **What SHOULD the model have considered?** (Correct decision path)
+3. **How can we prevent similar errors?** (Clinical improvement insights)
 
-**Contrastive Mistake Explanation (CME)** generates **dual explanations** for each mistake:
+## 💡 Clinical Innovation
 
-- 🔴 **Mistake Path**: SHAP explanation for the wrong prediction
-- 🟢 **Correction Path**: SHAP explanation for a correct similar example
-- 📊 **Contrastive View**: Side-by-side comparison showing the "explanation gap"
+**MedGuard AI** leverages **Contrastive Mistake Explanation (CME)** to provide **dual diagnostic insights** for each prediction error:
+
+- 🔴 **Error Analysis**: SHAP explanation for the incorrect diagnosis
+- 🟢 **Correct Decision Path**: SHAP explanation for a similar correct case
+- 📊 **Clinical Comparison**: Side-by-side analysis showing diagnostic improvement opportunities
 
 ## 🚀 Quick Start
 
@@ -36,22 +38,22 @@ streamlit run src/streamlit_app.py
 
 ### Usage
 
-1. **Load Dataset**: Click "Load Heart Disease Dataset" in the Data & Training tab
-2. **Train Model**: Configure parameters in the sidebar and train the RandomForest model
-3. **Explore Mistakes**: Navigate to the "Mistake Analysis" tab
-4. **View Contrastive Explanations**: Select a mistake to see side-by-side SHAP comparisons
+1. **Load Patient Data**: Click "Load Patient Dataset" in the System Diagnostics tab
+2. **Train Clinical Model**: Configure parameters in the sidebar and train the AI model
+3. **Analyze Decisions**: Navigate to the "Clinical Decision Analysis" tab
+4. **Review Diagnostic Insights**: Select cases to see side-by-side SHAP comparisons and clinical recommendations
 
 ## 📁 Project Structure
 
 ```
-Contrastive-Mistake-Explainer-CME-/
+MedGuard-AI/
 ├── src/
-│   ├── streamlit_app.py        # Main Streamlit application
-│   ├── data_loader.py          # Dataset loading and preprocessing
-│   ├── model_trainer.py        # RandomForest training & nearest neighbor finder
-│   └── cme_explainer.py        # SHAP-based contrastive explanation engine
-├── data/                       # Data directory (auto-created)
-├── models/                     # Saved models (auto-created)
+│   ├── streamlit_app.py        # Main MedGuard AI application
+│   ├── data_loader.py          # Patient data loading and preprocessing
+│   ├── model_trainer.py        # Clinical model training & diagnostic analysis
+│   └── cme_explainer.py        # SHAP-based clinical explanation engine
+├── data/                       # Patient data directory (auto-created)
+├── models/                     # Trained clinical models (auto-created)
 ├── requirements.txt
 └── README.md
 ```
