@@ -472,6 +472,21 @@ def main():
                         st.balloons()
                         st.markdown("---")
                         st.markdown(DEMO_SUCCESS_MESSAGE)
+                        
+                        # Demo completion celebration
+                        st.markdown("""
+                        <div style='text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                    border-radius: 15px; color: white; margin: 20px 0;'>
+                            <h2 style='color: white; margin-bottom: 15px;'>🏆 Thank You for Watching!</h2>
+                            <p style='font-size: 18px; margin: 10px 0;'>
+                                MedGuard AI: Preventing Medical AI Failures Before They Cause Harm
+                            </p>
+                            <p style='font-size: 14px; opacity: 0.9; margin: 10px 0;'>
+                                ⭐ Star us on GitHub | 📧 Contact for healthcare partnerships
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         st.session_state.demo_completed = True
                         st.session_state.demo_active = False
                         
@@ -532,6 +547,15 @@ def main():
                     risk_level = risk_predictor.get_risk_level(risk_score)
                     risk_factors = risk_predictor.get_risk_factors(X_case, y_pred_proba)
                     
+                    # Demo mode annotation for risk warning
+                    if st.session_state.demo_active and st.session_state.demo_step >= 2:  # Risk shows at step 3
+                        st.markdown("""
+                        <div class='demo-step-highlight'>
+                            <strong>🎯 MedGuard Innovation Highlight:</strong> 
+                            This risk warning appeared BEFORE the diagnosis was made - proactive, not reactive!
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
                     # Display prominent risk alert based on level
                     if risk_level == "HIGH":
                         st.error(f"⚠️ **HIGH FAILURE RISK DETECTED** ({risk_score:.1%})")
@@ -590,6 +614,14 @@ def main():
                 
                 st.markdown("---")
                 
+                # Demo mode highlighting
+                if st.session_state.demo_active:
+                    st.markdown("""
+                    <div style='background: linear-gradient(90deg, #667eea, #764ba2); 
+                                padding: 2px; border-radius: 10px; margin: 10px 0;'>
+                        <div style='background: white; padding: 15px; border-radius: 8px;'>
+                    """, unsafe_allow_html=True)
+                
                 display_patient_case_card(
                     patient_data=patient_data,
                     patient_idx=selected_mistake['index'],
@@ -598,6 +630,9 @@ def main():
                     is_mistake=True,
                     case_type="Diagnostic Discrepancy"
                 )
+                
+                if st.session_state.demo_active:
+                    st.markdown("</div></div>", unsafe_allow_html=True)
                 
                 # AI Prediction Panel and Failure Alert
                 st.divider()
@@ -695,6 +730,17 @@ def main():
                     # Optional explanation button for correct cases
                     if st.button("📊 View AI Reasoning", use_container_width=True):
                         st.session_state.show_explanation = True
+                
+                # Demo mode annotation for contrastive explanation
+                if st.session_state.demo_active and st.session_state.show_explanation:
+                    st.markdown("""
+                    <div style='background: #e8f5e9; border-left: 4px solid #4caf50; 
+                                padding: 15px; margin: 15px 0; border-radius: 5px;'>
+                        <strong>💡 What Makes This Different:</strong><br>
+                        Standard XAI tools (SHAP, LIME) would show you what the AI saw.<br>
+                        <strong>MedGuard shows you what it SHOULD have seen</strong> - revealing the gap between wrong and correct reasoning.
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 # Explanation display (triggered by button)
                 if st.session_state.get('show_explanation', False):
