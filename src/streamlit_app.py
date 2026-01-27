@@ -499,6 +499,141 @@ def main():
 
                 **⚖️ Legal Impact**: Reduces medical malpractice risk from AI systems by providing documented safety oversight and failure analysis.
                 """)
+                
+                st.markdown("---")
+                st.markdown("## 🏥 Clinical Workflow Integration")
+                st.markdown("*How healthcare providers actually use MedGuard AI in practice*")
+
+                # Workflow diagram
+                st.markdown("""
+                <div style='background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+                            padding: 30px; border-radius: 15px; margin: 20px 0;'>
+                    
+                <div style='text-align: center; margin-bottom: 30px;'>
+                    <div style='background: white; display: inline-block; padding: 15px 30px; 
+                                border-radius: 10px; border: 2px solid #667eea;'>
+                            <h4 style='margin: 0; color: #667eea;'>📋 Step 1: Patient Data Input</h4>
+                            <p style='margin: 5px 0 0 0; font-size: 14px;'>Clinician enters patient demographics, vitals, test results</p>
+                        </div>
+                </div>
+
+                <div style='text-align: center; margin: 20px 0;'>
+                    <div style='font-size: 30px; color: #667eea;'>↓</div>
+                </div>
+
+                <div style='text-align: center; margin-bottom: 30px;'>
+                    <div style='background: white; display: inline-block; padding: 15px 30px; 
+                                border-radius: 10px; border: 2px solid #667eea;'>
+                            <h4 style='margin: 0; color: #667eea;'>🤖 Step 2: AI Generates Diagnosis</h4>
+                            <p style='margin: 5px 0 0 0; font-size: 14px;'>Primary RandomForest model analyzes data</p>
+                        </div>
+                </div>
+
+                <div style='text-align: center; margin: 20px 0;'>
+                    <div style='font-size: 30px; color: #667eea;'>↓</div>
+                </div>
+
+                <div style='text-align: center; margin-bottom: 30px;'>
+                    <div style='background: #fff3cd; display: inline-block; padding: 20px 40px; 
+                                border-radius: 10px; border: 3px solid #ffc107; box-shadow: 0 4px 15px rgba(255,193,7,0.3);'>
+                            <h3 style='margin: 0; color: #f57c00;'>🎯 Step 3: MedGuard Risk Check</h3>
+                            <p style='margin: 10px 0 0 0; font-size: 16px; font-weight: bold;'>
+                                ⚡ THIS IS THE INNOVATION ⚡
+                            </p>
+                            <p style='margin: 5px 0 0 0; font-size: 14px;'>
+                                Meta-model predicts if AI is about to fail
+                            </p>
+                        </div>
+                </div>
+
+                <div style='display: flex; justify-content: space-around; margin-top: 40px;'>
+                    
+                    <!-- HIGH RISK PATH -->
+                    <div style='flex: 1; margin: 0 20px;'>
+                        <div style='text-align: center; margin-bottom: 15px;'>
+                            <div style='background: #ffebee; display: inline-block; padding: 10px 20px; 
+                                        border-radius: 8px; border: 2px solid #ef5350;'>
+                                    <strong style='color: #c62828;'>⚠️ HIGH RISK DETECTED</strong>
+                                </div>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #ef5350; margin: 10px 0;'>
+                            <strong>→ Trigger Contrastive Analysis</strong><br>
+                            <small>Show what AI got wrong vs. correct reasoning</small>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #ef5350; margin: 10px 0;'>
+                            <strong>→ Display Correctability Score</strong><br>
+                            <small>Quantify how fixable the error is</small>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #ef5350; margin: 10px 0;'>
+                            <strong>→ Provide Corrected Diagnosis</strong><br>
+                            <small>Show what AI should have concluded</small>
+                        </div>
+                        
+                        <div style='background: #e8f5e9; padding: 15px; border-radius: 8px; 
+                                    margin-top: 20px; text-align: center; border: 2px solid #4caf50;'>
+                            <strong style='color: #2e7d32;'>✅ Doctor Makes Informed Decision</strong><br>
+                            <small>Armed with failure analysis & corrected reasoning</small>
+                        </div>
+                    </div>
+                    
+                    <!-- LOW RISK PATH -->
+                    <div style='flex: 1; margin: 0 20px;'>
+                        <div style='text-align: center; margin-bottom: 15px;'>
+                            <div style='background: #e8f5e9; display: inline-block; padding: 10px 20px; 
+                                        border-radius: 8px; border: 2px solid #4caf50;'>
+                                    <strong style='color: #2e7d32;'>✓ LOW RISK</strong>
+                                </div>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #4caf50; margin: 10px 0;'>
+                            <strong>→ Doctor Reviews AI Recommendation</strong><br>
+                            <small>Standard clinical oversight</small>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #4caf50; margin: 10px 0;'>
+                            <strong>→ Verify Against Guidelines</strong><br>
+                            <small>Routine quality check</small>
+                        </div>
+                        
+                        <div style='background: white; padding: 15px; border-radius: 8px; 
+                                    border-left: 5px solid #4caf50; margin: 10px 0;'>
+                            <strong>→ Proceed with Confidence</strong><br>
+                            <small>AI decision likely reliable</small>
+                        </div>
+                        
+                        <div style='background: #e8f5e9; padding: 15px; border-radius: 8px; 
+                                    margin-top: 20px; text-align: center; border: 2px solid #4caf50;'>
+                            <strong style='color: #2e7d32;'>✅ Proceed with Standard Protocol</strong><br>
+                            <small>AI recommendation validated</small>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Key innovation callout
+                st.success("""
+                **🎯 The Critical Difference:**
+
+                Most medical AI systems stop at **Step 2** - they provide a diagnosis and trust the doctor to validate it.
+
+                **MedGuard adds Step 3** - a proactive safety net that:
+                1. Monitors the AI itself (not just the patient)
+                2. Warns when failures are likely
+                3. Explains WHY failures occur
+                4. Provides corrected reasoning
+
+                **Result**: Doctors make better decisions because they know WHEN to trust AI and WHY to override it.
+                """)
     
     with tab2:
         st.header("🔍 Clinical Decision Analysis")
