@@ -728,30 +728,133 @@ def main():
         else:
             trainer = st.session_state.trainer
             
-            # Performance metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Accuracy", f"{trainer.accuracy:.3f}")
-            with col2:
-                st.metric("Precision", f"{trainer.precision:.3f}")
-            with col3:
-                st.metric("Recall", f"{trainer.recall:.3f}")
-            with col4:
-                st.metric("F1-Score", f"{trainer.f1:.3f}")
+            # System Status Overview Card (NEW)
+            st.markdown("### 🏥 System Status Overview")
             
-            # Confusion Matrix
-            st.subheader("🔢 Confusion Matrix")
+            # Get metrics for status dashboard
+            total_cases = len(st.session_state.X_test)
+            mistakes = trainer.get_mistakes(st.session_state.X_test, st.session_state.y_test)
+            failure_count = len(mistakes)
+            accuracy = trainer.accuracy
+            
+            # Create 5-column status dashboard
+            status_col1, status_col2, status_col3, status_col4, status_col5 = st.columns(5)
+            
+            with status_col1:
+                st.metric(
+                    label="✅ AI Model Status",
+                    value="Active",
+                    delta="RandomForest v1.0",
+                    delta_color="normal"
+                )
+            
+            with status_col2:
+                st.metric(
+                    label="✅ Safety Monitor",
+                    value="Enabled",
+                    delta="MedGuard Active",
+                    delta_color="normal"
+                )
+            
+            with status_col3:
+                st.metric(
+                    label="📊 Cases Analyzed",
+                    value=f"{total_cases}",
+                    delta="Test Dataset",
+                    delta_color="off"
+                )
+            
+            with status_col4:
+                st.metric(
+                    label="⚠️ Failures Detected",
+                    value=f"{failure_count}",
+                    delta=f"{failure_count/total_cases:.1%}",
+                    delta_color="inverse" if failure_count > 0 else "normal"
+                )
+            
+            with status_col5:
+                st.metric(
+                    label="📈 Overall Accuracy",
+                    value=f"{accuracy:.1%}",
+                    delta="Target: 95%",
+                    delta_color="normal" if accuracy >= 0.85 else "inverse"
+                )
+            
+            st.divider()
+            
+            # Patient Database Overview (renamed from Dataset Statistics)
+            st.markdown("### 📋 Patient Database Overview")
+            
+            st.info("""
+            **💡 Clinical Context:** This section provides an overview of the patient database used for AI training and testing, 
+            helping clinicians understand the data distribution and demographics that inform the AI's decision-making process.
+            """)
+            
+            # Display dataset statistics (existing functionality)
+            if st.session_state.data_loaded:
+                col1, col2 = st.columns([1, 1])
+                
+                with col1:
+                    st.subheader("📋 Patient Data Preview")
+                    st.dataframe(st.session_state.raw_data.head())
+                
+                with col2:
+                    st.subheader("📊 Clinical Feature Statistics")
+                    st.dataframe(st.session_state.processed_data.describe())
+            
+            # AI Decision Accuracy Matrix (renamed from Confusion Matrix)
+            st.markdown("### 🎯 AI Decision Accuracy Matrix")
+            
+            st.info("""
+            **💡 Clinical Context:** This matrix shows where AI decisions align with actual clinical outcomes. 
+            Perfect alignment indicates reliable AI assistance, while discrepancies highlight areas requiring clinical oversight.
+            """)
+            
+            # Confusion Matrix (existing functionality)
             fig, ax = plt.subplots(figsize=(8, 6))
             trainer.plot_confusion_matrix(ax)
             st.pyplot(fig)
             
-            # Mistakes analysis
+            # Clinical Context for Confusion Matrix (NEW)
+            st.markdown("#### 🚨 Clinical Risk Assessment")
+            
+            # Calculate false positives and false negatives from confusion matrix
+            cm = trainer.confusion_matrix
+            if cm.shape == (2, 2):
+                tn, fp, fn, tp = cm.ravel()
+                
+                risk_col1, risk_col2 = st.columns(2)
+                
+                with risk_col1:
+                    st.markdown(f"""
+                    <div style='background-color: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;'>
+                        <h4 style='color: #856404; margin: 0 0 10px 0;'>⚠️ False Positives = {fp} cases</h4>
+                        <p style='margin: 0; color: #856404;'><strong>Clinical Impact:</strong> Unnecessary clinical interventions</p>
+                        <p style='margin: 5px 0 0 0; color: #856404;'><strong>Patient Risk:</strong> Potential overtreatment, anxiety, increased healthcare costs</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with risk_col2:
+                    st.markdown(f"""
+                    <div style='background-color: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545;'>
+                        <h4 style='color: #721c24; margin: 0 0 10px 0;'>🚨 False Negatives = {fn} cases</h4>
+                        <p style='margin: 0; color: #721c24;'><strong>Clinical Impact:</strong> Missed diagnoses (CRITICAL RISK)</p>
+                        <p style='margin: 5px 0 0 0; color: #721c24;'><strong>Patient Risk:</strong> Delayed treatment, disease progression, potential mortality</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Mistakes analysis (existing functionality, enhanced with clinical context)
             mistakes = trainer.get_mistakes(
                 st.session_state.X_test,
                 st.session_state.y_test
             )
             if len(mistakes) > 0:
-                st.subheader("🔍 Mistake Analysis")
+                st.markdown("### 🔍 Diagnostic Error Analysis")
+                
+                st.info("""
+                **� Clinical Context:** This analysis identifies patterns in AI diagnostic errors, 
+                helping healthcare providers understand common failure modes and implement targeted improvements.
+                """)
                 
                 # Mistake distribution
                 mistake_types = {}
@@ -762,13 +865,28 @@ def main():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.write("**Mistake Distribution:**")
+                    st.write("**Error Distribution:**")
                     for mistake_type, count in mistake_types.items():
-                        st.write(f"• {mistake_type}: {count} cases")
+                        # Add clinical interpretation
+                        if "True:1 → Pred:0" in mistake_type:
+                            st.write(f"• {mistake_type}: {count} cases *(Missed Disease)*")
+                        elif "True:0 → Pred:1" in mistake_type:
+                            st.write(f"• {mistake_type}: {count} cases *(False Alarm)*")
+                        else:
+                            st.write(f"• {mistake_type}: {count} cases")
                 
                 with col2:
-                    st.metric("Total Mistakes", len(mistakes))
-                    st.metric("Mistake Rate", f"{len(mistakes)/len(st.session_state.y_test):.3f}")
+                    st.metric("Total Errors", len(mistakes))
+                    st.metric("Error Rate", f"{len(mistakes)/len(st.session_state.y_test):.3f}")
+                    
+                    # Add clinical severity assessment
+                    error_rate = len(mistakes)/len(st.session_state.y_test)
+                    if error_rate > 0.20:
+                        st.error("🚨 High Error Rate - Immediate Review Required")
+                    elif error_rate > 0.10:
+                        st.warning("⚠️ Moderate Error Rate - Clinical Oversight Recommended")
+                    else:
+                        st.success("✅ Acceptable Error Rate - Routine Monitoring")
 
 
 if __name__ == "__main__":
