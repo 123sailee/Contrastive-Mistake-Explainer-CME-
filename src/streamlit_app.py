@@ -405,6 +405,25 @@ def main():
                     with col2b:
                         st.metric("Recall", f"{trainer.recall:.3f}")
                         st.metric("F1-Score", f"{trainer.f1:.3f}")
+                
+                # Key Terms Glossary
+                st.markdown("---")
+                with st.expander("📖 Key Terms Glossary"):
+                    st.markdown("""
+                    **Contrastive Explanation**: Comparing what the AI did wrong vs. what it should have done
+                    
+                    **Failure Risk Predictor**: Meta-model that predicts AI failures before they happen
+                    
+                    **Correctability Score**: Metric quantifying how easy/hard it is to fix each mistake
+                    
+                    **False Positive**: AI predicts disease when patient is healthy (unnecessary intervention)
+                    
+                    **False Negative**: AI misses disease in sick patient (CRITICAL - delayed treatment)
+                    
+                    **Meta-Model**: A model that predicts the behavior of another model
+                    
+                    **SHAP Values**: Industry-standard AI explanation method showing feature importance
+                    """)
     
     with tab2:
         st.header("🔍 Clinical Decision Analysis")
@@ -573,6 +592,8 @@ def main():
                     with col1:
                         # Risk score metric
                         risk_delta = "HIGH" if risk_score > 0.7 else "MEDIUM" if risk_score > 0.4 else "LOW"
+                        st.markdown("**Failure Risk Score** ℹ️", 
+                                   help="Unlike traditional AI that only predicts diagnoses, MedGuard predicts when the AI itself is likely to make mistakes")
                         st.metric(
                             "Failure Probability", 
                             f"{risk_score:.1%}",
@@ -712,7 +733,8 @@ def main():
                     
                     **Critical Issue:** The AI system has made an incorrect diagnostic decision that requires immediate analysis.
                     
-                    **Recommended Action:** Use MedGuard's contrastive explanation system to understand why the AI failed and learn from this error.
+                    **Recommended Action:** Use MedGuard's **🔍 Contrastive Analysis** ℹ️", 
+                    help="Shows not just what the AI saw, but what it SHOULD have focused on - revealing the gap between wrong and correct reasoning")
                     """)
                     
                     # Analyze AI Failure button (only when wrong)
@@ -857,6 +879,17 @@ def main():
                                     # Section 1: Why AI Failed
                                     st.markdown("### 🔴 Why AI Failed - Incorrect Focus")
                                     
+                                    with st.expander("ℹ️ What are SHAP Values?"):
+                                        st.markdown("""
+                                        **SHAP (SHapley Additive exPlanations)** is the industry-standard method for explaining AI predictions.
+                                        
+                                        **How MedGuard extends it:**
+                                        - Standard SHAP: "Feature X had importance 0.35"
+                                        - MedGuard: "AI over-weighted Feature X (0.35) but should have focused on Feature Y (0.62)"
+                                        
+                                        We use SHAP for BOTH the mistake path AND the correction path, then compare them.
+                                        """)
+                                    
                                     col1a, col1b = st.columns([2, 1])
                                     with col1a:
                                         st.markdown("**SHAP Mistake Path Visualization**")
@@ -920,6 +953,8 @@ def main():
                                     
                                     col3a, col3b, col3c = st.columns([1, 1, 1])
                                     with col3a:
+                                        st.markdown("**📊 Correctability Assessment** ℹ️",
+                                                   help="Quantifies how 'fixable' each AI mistake is - helps prioritize which errors need immediate attention vs. system retraining")
                                         st.metric(
                                             label="Correctability Score",
                                             value=f"{correctability_score:.1f}%",
@@ -1263,8 +1298,9 @@ def main():
                 🎯 **Proactive Prevention**: MedGuard caught **{recall_high:.0f}%** of all mistakes at HIGH risk level, 
                 and **{recall_medium_plus:.0f}%** when including MEDIUM risk warnings.
                 
-                💡 **This proves** the meta-model actually works - it's not random guessing!
-                """)
+                💡 **This proves** the **Meta-Model** ℹ️""",
+                help="A second AI that watches the first AI and warns doctors when it's about to fail - like a quality control system for AI")
+                st.markdown(" actually works - it's not random guessing!")
             else:
                 st.warning("⚠️ Risk predictor not trained yet. Run model training to enable calibration analysis.")
 
