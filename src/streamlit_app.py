@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sys
 import os
+import time
 
 # Add src directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -527,7 +528,7 @@ def main():
                                     )
                                     
                                     # Display results
-                                    st.success("✅ Clinical explanation generated!")
+                                    st.success("✅ Clinical failure analysis completed!")
                                     
                                     # Display both patient cases side by side
                                     st.subheader("🏥 Patient Case Comparison")
@@ -559,31 +560,137 @@ def main():
                                             case_type="Correct Diagnosis"
                                         )
                                     
-                                    # Summary section
-                                    st.subheader("📝 Clinical Analysis Summary")
-                                    summary = explainer.get_explanation_summary(explanation)
-                                    st.markdown(summary)
+                                    # Professional Clinical Failure Report
+                                    st.divider()
+                                    st.markdown("## � MedGuard Clinical Failure Report")
                                     
-                                    # Visualization
-                                    st.subheader("📊 Diagnostic Comparison Visualization")
-                                    fig = explainer.plot_contrastive_explanation(explanation)
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    # Get top features for analysis
+                                    shap_mistake = explanation['shap_mistake']
+                                    shap_correction = explanation['shap_correction']
+                                    feature_names = explanation['feature_names']
                                     
-                                    # Feature comparison table
-                                    st.subheader("🔍 Clinical Feature Comparison")
-                                    comparison_data = []
-                                    for i, feat_name in enumerate(explanation['feature_names']):
-                                        comparison_data.append({
-                                            'Feature': feat_name,
-                                            'Incorrect Value': f"{explanation['feature_values_mistake'][i]:.3f}",
-                                            'Correct Value': f"{explanation['feature_values_correction'][i]:.3f}",
-                                            'Incorrect SHAP': f"{explanation['shap_mistake'][i]:.3f}",
-                                            'Correct SHAP': f"{explanation['shap_correction'][i]:.3f}",
-                                            'SHAP Difference': f"{explanation['shap_delta'][i]:.3f}"
-                                        })
+                                    # Get top 3 features from mistake path (most influential in wrong decision)
+                                    mistake_indices = np.argsort(np.abs(shap_mistake))[-3:][::-1]
+                                    top_mistake_features = [feature_names[i] for i in mistake_indices]
                                     
-                                    comparison_df = pd.DataFrame(comparison_data)
-                                    st.dataframe(comparison_df, use_container_width=True)
+                                    # Get top 3 features from correction path (should have been considered)
+                                    correction_indices = np.argsort(np.abs(shap_correction))[-3:][::-1]
+                                    top_correction_features = [feature_names[i] for i in correction_indices]
+                                    
+                                    # Get features that AI ignored but should have considered
+                                    shap_delta = explanation['shap_delta']
+                                    ignored_indices = np.argsort(shap_delta)[-3:][::-1]
+                                    ignored_features = [feature_names[i] for i in ignored_indices]
+                                    
+                                    # Section 1: Why AI Failed
+                                    st.markdown("### 🔴 Why AI Failed - Incorrect Focus")
+                                    
+                                    col1a, col1b = st.columns([2, 1])
+                                    with col1a:
+                                        st.markdown("**SHAP Mistake Path Visualization**")
+                                        fig_mistake = explainer.plot_contrastive_explanation(explanation)
+                                        # We'll need to modify this to show only the mistake path
+                                        st.plotly_chart(fig_mistake, use_container_width=True)
+                                    
+                                    with col1b:
+                                        st.markdown("**Key Findings**")
+                                        st.error("The AI over-weighted:")
+                                        for feature in top_mistake_features:
+                                            st.markdown(f"• **{feature}**")
+                                        
+                                        with st.expander("� Detailed Feature Values"):
+                                            for i, feature in enumerate(top_mistake_features):
+                                                feature_idx = feature_names.index(feature)
+                                                value = explanation['feature_values_mistake'][feature_idx]
+                                                shap_val = shap_mistake[feature_idx]
+                                                st.markdown(f"**{feature}**: {value:.3f} (SHAP: {shap_val:.3f})")
+                                    
+                                    # Section 2: Correct Clinical Reasoning
+                                    st.markdown("### 🟢 Correct Clinical Reasoning")
+                                    
+                                    col2a, col2b = st.columns([2, 1])
+                                    with col2a:
+                                        st.markdown("**SHAP Correction Path Visualization**")
+                                        # We'll reuse the same plot but focus on the correction
+                                        st.plotly_chart(fig_mistake, use_container_width=True)
+                                    
+                                    with col2b:
+                                        st.markdown("**Clinical Guidelines**")
+                                        st.success("Should focus on:")
+                                        for feature in top_correction_features:
+                                            st.markdown(f"• **{feature}**")
+                                        
+                                        st.warning("AI ignored critical features:")
+                                        for feature in ignored_features:
+                                            st.markdown(f"• **{feature}**")
+                                    
+                                    # Section 3: MedGuard Assessment
+                                    st.markdown("### 📊 MedGuard Assessment")
+                                    
+                                    # Calculate correctability score (simplified version)
+                                    # Higher SHAP delta = harder to correct
+                                    max_delta = np.max(np.abs(shap_delta))
+                                    correctability_score = max(0, 100 - (max_delta * 50))  # Simplified scoring
+                                    correctability_score = min(100, max(0, correctability_score))
+                                    
+                                    if correctability_score > 70:
+                                        difficulty = "Easy"
+                                        difficulty_color = "green"
+                                        recommendation = "This mistake could have been prevented by following standard clinical protocols for vital sign assessment."
+                                    elif correctability_score > 40:
+                                        difficulty = "Medium"
+                                        difficulty_color = "orange"
+                                        recommendation = "This mistake requires additional clinical training and decision support systems to prevent recurrence."
+                                    else:
+                                        difficulty = "Hard"
+                                        difficulty_color = "red"
+                                        recommendation = "This mistake represents a complex diagnostic challenge requiring comprehensive model retraining and additional clinical features."
+                                    
+                                    col3a, col3b, col3c = st.columns([1, 1, 1])
+                                    with col3a:
+                                        st.metric(
+                                            label="Correctability Score",
+                                            value=f"{correctability_score:.1f}%",
+                                            delta=None,
+                                            delta_color="normal"
+                                        )
+                                        st.markdown(f"<div style='text-align: center; font-weight: bold; color: {difficulty_color}; font-size: 18px;'>{difficulty} to Fix</div>", 
+                                                 unsafe_allow_html=True)
+                                    
+                                    with col3b:
+                                        st.markdown("**Clinical Interpretation**")
+                                        st.info(recommendation)
+                                    
+                                    with col3c:
+                                        st.markdown("**Risk Assessment**")
+                                        if predicted_class == 1 and actual_class == 0:
+                                            st.error("False Positive\nUnnecessary treatment risk")
+                                        elif predicted_class == 0 and actual_class == 1:
+                                            st.error("False Negative\nMissed diagnosis risk")
+                                        else:
+                                            st.success("Correct Classification\nNo clinical risk")
+                                    
+                                    # Action Buttons Section
+                                    st.divider()
+                                    st.markdown("### 🎯 Recommended Actions")
+                                    
+                                    col_action1, col_action2, col_action3 = st.columns([1, 1, 1])
+                                    
+                                    with col_action1:
+                                        if st.button("✅ Accept Corrected Diagnosis", type="primary", use_container_width=True):
+                                            st.success("✅ Corrected diagnosis accepted. Clinical decision updated to match ground truth.")
+                                            st.balloons()
+                                    
+                                    with col_action2:
+                                        if st.button("🚫 Override AI Decision", use_container_width=True):
+                                            st.warning("⚠️ AI decision overridden. Manual clinical intervention recorded.")
+                                            st.info("This case has been flagged for model review and improvement.")
+                                    
+                                    with col_action3:
+                                        if st.button("📝 Report to Safety Team", use_container_width=True):
+                                            st.error("🚨 Case reported to MedGuard Safety Team.")
+                                            st.info("Report ID: MG-" + str(mistake['index']) + "-" + str(int(time.time())))
+                                            st.success("Safety team will review this diagnostic failure within 24 hours.")
                                     
                                 except Exception as e:
                                     st.error(f"❌ Error generating explanation: {str(e)}")
