@@ -366,6 +366,84 @@ def main():
                 selected_mistake = mistakes[st.session_state.selected_mistake_idx]
                 patient_data = st.session_state.X_test.loc[selected_mistake['index']]
                 
+                # ========================================
+                # PROACTIVE FAILURE RISK WARNING (MedGuard Innovation)
+                # ========================================
+                st.markdown("---")
+                st.markdown("### 🎯 MedGuard Proactive Safety Check")
+                
+                # Load risk predictor
+                from model_trainer import ModelTrainer
+                risk_predictor = ModelTrainer.load_risk_predictor()
+                
+                if risk_predictor is not None:
+                    # Get prediction probabilities for this case
+                    X_case = st.session_state.X_test.loc[[selected_mistake['index']]]
+                    y_pred_proba = trainer.model.predict_proba(X_case)
+                    
+                    # Predict failure risk
+                    risk_score = risk_predictor.predict_risk(X_case, y_pred_proba)
+                    risk_level = risk_predictor.get_risk_level(risk_score)
+                    risk_factors = risk_predictor.get_risk_factors(X_case, y_pred_proba)
+                    
+                    # Display prominent risk alert based on level
+                    if risk_level == "HIGH":
+                        st.error(f"⚠️ **HIGH FAILURE RISK DETECTED** ({risk_score:.1%})")
+                        st.markdown("**⚠️ CRITICAL ALERT**: Exercise extreme clinical caution. AI prediction may be unreliable.")
+                    elif risk_level == "MEDIUM":
+                        st.warning(f"⚡ **MODERATE FAILURE RISK** ({risk_score:.1%})")
+                        st.markdown("**⚡ CAUTION**: Verify AI recommendation carefully against clinical guidelines.")
+                    else:
+                        st.info(f"✓ **LOW FAILURE RISK** ({risk_score:.1%})")
+                        st.markdown("**✓ NORMAL**: AI decision likely reliable. Standard clinical review recommended.")
+                    
+                    # Risk visualization
+                    col1, col2 = st.columns([1, 2])
+                    
+                    with col1:
+                        # Risk score metric
+                        risk_delta = "HIGH" if risk_score > 0.7 else "MEDIUM" if risk_score > 0.4 else "LOW"
+                        st.metric(
+                            "Failure Probability", 
+                            f"{risk_score:.1%}",
+                            delta=f"{risk_delta} Risk",
+                            delta_color="inverse"
+                        )
+                    
+                    with col2:
+                        # Colored progress bar
+                        if risk_level == "HIGH":
+                            st.markdown("**Risk Level:** 🔴 HIGH (>70%)")
+                            st.progress(risk_score)
+                        elif risk_level == "MEDIUM":
+                            st.markdown("**Risk Level:** 🟠 MEDIUM (40-70%)")
+                            st.progress(risk_score)
+                        else:
+                            st.markdown("**Risk Level:** 🟢 LOW (<40%)")
+                            st.progress(risk_score)
+                    
+                    # Risk factors explanation
+                    with st.expander("🔍 What Triggered This Warning?"):
+                        st.markdown("**MedGuard detected the following risk indicators:**")
+                        
+                        if len(risk_factors) > 0:
+                            for factor_name, factor_value, interpretation in risk_factors:
+                                st.markdown(f"""
+                                <div style='background-color: #fff3cd; padding: 10px; margin: 5px 0; border-radius: 5px; border-left: 4px solid #ffc107;'>
+                                    <strong>{factor_name}:</strong> {factor_value}<br>
+                                    <em>{interpretation}</em>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        else:
+                            st.success("✓ No significant risk factors detected. AI operating within normal parameters.")
+                        
+                        st.markdown("---")
+                        st.caption("💡 **This is the MedGuard Innovation**: We predict failures BEFORE they cause harm, not just explain predictions after the fact.")
+                else:
+                    st.warning("⚠️ Failure risk predictor not loaded. Train the model to enable proactive safety monitoring.")
+                
+                st.markdown("---")
+                
                 display_patient_case_card(
                     patient_data=patient_data,
                     patient_idx=selected_mistake['index'],
