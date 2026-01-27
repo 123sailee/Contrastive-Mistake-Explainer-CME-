@@ -372,27 +372,109 @@ def main():
                     case_type="Diagnostic Discrepancy"
                 )
                 
-                # Patient selector below the card
+                # AI Prediction Panel and Failure Alert
                 st.divider()
-                st.subheader("📋 Select Patient Case")
+                st.subheader("🤖 AI Prediction Analysis")
                 
-                mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
-                                 for i, m in enumerate(mistakes)]
+                # Get AI prediction probabilities for the selected patient
+                patient_data = st.session_state.X_test.loc[selected_mistake['index']].values.reshape(1, -1)
+                prediction_proba = trainer.model.predict_proba(patient_data)[0]
+                predicted_class = selected_mistake['predicted_label']
+                actual_class = selected_mistake['true_label']
                 
-                new_selection = st.selectbox(
-                    "Choose a diagnostic discrepancy to analyze:",
-                    range(len(mistake_options)),
-                    index=st.session_state.selected_mistake_idx,
-                    format_func=lambda x: mistake_options[x]
-                )
+                # AI Prediction Panel
+                col_pred, col_actual = st.columns([1, 1])
                 
-                # Update session state if selection changed
-                if new_selection != st.session_state.selected_mistake_idx:
-                    st.session_state.selected_mistake_idx = new_selection
-                    st.rerun()
+                with col_pred:
+                    st.markdown("**🤖 AI Prediction**")
+                    predicted_disease = "Heart Disease" if predicted_class == 1 else "Normal"
+                    confidence = prediction_proba[predicted_class] * 100
+                    
+                    # Display prediction with confidence
+                    st.metric(
+                        label="Predicted Diagnosis",
+                        value=predicted_disease,
+                        delta=f"Confidence: {confidence:.1f}%",
+                        delta_color="normal"
+                    )
+                    
+                    # Confidence bar
+                    st.markdown("**Confidence Level**")
+                    st.progress(confidence / 100)
+                    st.markdown(f"<p style='text-align: center; font-size: 12px; color: #666;'>{confidence:.1f}% confidence</p>", 
+                             unsafe_allow_html=True)
+                    
+                    # Probability breakdown
+                    st.markdown("**Probability Breakdown**")
+                    prob_col1, prob_col2 = st.columns([1, 1])
+                    with prob_col1:
+                        st.metric("Heart Disease", f"{prediction_proba[1]:.1%}")
+                    with prob_col2:
+                        st.metric("Normal", f"{prediction_proba[0]:.1%}")
                 
-                if st.button("🔬 Generate Clinical Explanation", type="primary"):
-                    with st.spinner("Analyzing diagnostic discrepancy and finding correct decision path..."):
+                with col_actual:
+                    st.markdown("**🏥 Actual Diagnosis**")
+                    actual_disease = "Heart Disease" if actual_class == 1 else "Normal"
+                    
+                    # Display actual diagnosis
+                    st.metric(
+                        label="Clinical Diagnosis",
+                        value=actual_disease,
+                        delta="Ground Truth",
+                        delta_color="off"
+                    )
+                    
+                    # Diagnosis status indicator
+                    if predicted_class != actual_class:
+                        st.error("❌ MISMATCH DETECTED")
+                        st.markdown("""
+                        <div style='background-color: #ffe6e6; padding: 10px; border-radius: 5px; border-left: 4px solid #ff4444;'>
+                            <strong>⚠️ Diagnostic Error</strong><br>
+                            AI prediction does not match clinical outcome
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.success("✅ CORRECT MATCH")
+                        st.markdown("""
+                        <div style='background-color: #e6ffe6; padding: 10px; border-radius: 5px; border-left: 4px solid #44aa44;'>
+                            <strong>✓ Accurate Diagnosis</strong><br>
+                            AI prediction matches clinical outcome
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Failure Alert Banner
+                st.divider()
+                if predicted_class != actual_class:
+                    st.error("""
+                    ## ⚠️ AI MISDIAGNOSIS DETECTED - MedGuard Analysis Available
+                    
+                    **Critical Issue:** The AI system has made an incorrect diagnostic decision that requires immediate analysis.
+                    
+                    **Recommended Action:** Use MedGuard's contrastive explanation system to understand why the AI failed and learn from this error.
+                    """)
+                    
+                    # Analyze AI Failure button (only when wrong)
+                    if st.button("🔍 Analyze AI Failure", type="primary", use_container_width=True):
+                        st.session_state.show_explanation = True
+                else:
+                    st.success("""
+                    ## ✓ AI Diagnosis Matches Clinical Outcome
+                    
+                    **Status:** The AI system has made a correct diagnostic decision.
+                    
+                    **Note:** While this case was correctly diagnosed, you can still generate an explanation to understand the AI's reasoning process.
+                    """)
+                    
+                    # Optional explanation button for correct cases
+                    if st.button("📊 View AI Reasoning", use_container_width=True):
+                        st.session_state.show_explanation = True
+                
+                # Explanation display (triggered by button)
+                if st.session_state.get('show_explanation', False):
+                    st.divider()
+                    st.subheader("🔬 MedGuard Clinical Analysis")
+                    
+                    with st.spinner("Analyzing diagnostic decision and generating clinical insights..."):
                         try:
                             mistake = mistakes[st.session_state.selected_mistake_idx]
                             
@@ -510,6 +592,26 @@ def main():
                                 
                         except Exception as e:
                             st.error(f"❌ Error generating explanation: {str(e)}")
+                
+                # Patient selector below the analysis
+                st.divider()
+                st.subheader("📋 Select Patient Case")
+                
+                mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
+                                 for i, m in enumerate(mistakes)]
+                
+                new_selection = st.selectbox(
+                    "Choose a diagnostic discrepancy to analyze:",
+                    range(len(mistake_options)),
+                    index=st.session_state.selected_mistake_idx,
+                    format_func=lambda x: mistake_options[x]
+                )
+                
+                # Update session state if selection changed
+                if new_selection != st.session_state.selected_mistake_idx:
+                    st.session_state.selected_mistake_idx = new_selection
+                    st.session_state.show_explanation = False  # Reset explanation when changing patient
+                    st.rerun()
     
     with tab3:
         st.header("📈 Performance Metrics")
