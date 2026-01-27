@@ -288,7 +288,9 @@ def main():
                             trainer.train(
                                 st.session_state.X_train,
                                 st.session_state.y_train,
-                                st.session_state.feature_names
+                                st.session_state.feature_names,
+                                st.session_state.X_test,
+                                st.session_state.y_test
                             )
                             
                             # Evaluate model

@@ -9,6 +9,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import joblib
 import os
+from failure_risk_predictor import FailureRiskPredictor
+import pickle
 
 
 class ModelTrainer:
@@ -32,7 +34,7 @@ class ModelTrainer:
         self.is_trained = False
         self.feature_names = None
     
-    def train(self, X_train, y_train, feature_names=None):
+    def train(self, X_train, y_train, feature_names=None, X_test=None, y_test=None):
         """
         Train the RandomForest model.
         
@@ -40,6 +42,8 @@ class ModelTrainer:
             X_train: Training features
             y_train: Training labels
             feature_names: List of feature names
+            X_test: Test features (optional, for failure predictor training)
+            y_test: Test labels (optional, for failure predictor training)
         """
         
         self.model.fit(X_train, y_train)
@@ -49,6 +53,10 @@ class ModelTrainer:
         # Get training metrics
         y_pred_train = self.model.predict(X_train)
         train_accuracy = accuracy_score(y_train, y_pred_train)
+        
+        # Train failure risk predictor (MedGuard innovation) if test data provided
+        if X_test is not None and y_test is not None:
+            self.train_failure_predictor(X_train, y_train, X_test, y_test)
         
         return {
             'train_accuracy': train_accuracy,
@@ -179,6 +187,9 @@ class ModelTrainer:
         self.model = data['model']
         self.feature_names = data['feature_names']
         self.is_trained = True
+        
+        # Load risk predictor if available
+        self.risk_predictor = ModelTrainer.load_risk_predictor()
     
     def plot_confusion_matrix(self, ax):
         """
@@ -199,6 +210,47 @@ class ModelTrainer:
         ax.set_xlabel('Predicted Label')
         ax.set_ylabel('True Label')
         ax.set_title('Confusion Matrix')
+    
+    def train_failure_predictor(self, X_train, y_train, X_test, y_test):
+        """
+        Train meta-model to predict when primary model will fail
+        This is the proactive safety feature of MedGuard AI
+        """
+        print("\nTraining Failure Risk Predictor (Meta-Model)...")
+        
+        # Get primary model predictions
+        y_pred_train = self.model.predict(X_train)
+        y_pred_proba_train = self.model.predict_proba(X_train)
+        
+        # Initialize risk predictor
+        self.risk_predictor = FailureRiskPredictor(self.model)
+        
+        # Train on primary model's performance
+        risk_accuracy = self.risk_predictor.train(
+            X_train, y_train, 
+            y_pred_proba_train, y_pred_train
+        )
+        
+        print(f"Risk Predictor trained (Accuracy: {risk_accuracy['accuracy']:.2%})")
+        print(f"   Meta-model can now predict AI failures proactively")
+        
+        # Save to disk
+        os.makedirs('models', exist_ok=True)
+        with open('models/risk_predictor.pkl', 'wb') as f:
+            pickle.dump(self.risk_predictor, f)
+        print("Risk predictor saved to models/risk_predictor.pkl")
+        
+        return self.risk_predictor
+    
+    @staticmethod
+    def load_risk_predictor():
+        """Load pre-trained risk predictor from disk"""
+        try:
+            with open('models/risk_predictor.pkl', 'rb') as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            print("Warning: Risk predictor not found. Train the model first.")
+            return None
 
 
 def find_nearest_correct_example(X_train, y_train, X_mistake, y_true, model, n_neighbors=1):
