@@ -21,6 +21,173 @@ from model_trainer import ModelTrainer, find_nearest_correct_example
 from cme_explainer import CMEExplainer
 
 
+def display_patient_case_card(patient_data, patient_idx, true_label, predicted_label, is_mistake=True, case_type="Diagnostic Discrepancy"):
+    """
+    Display patient information as a professional medical case card.
+    
+    Args:
+        patient_data: Patient feature data (pandas Series)
+        patient_idx: Patient ID/index
+        true_label: Actual diagnosis
+        predicted_label: AI prediction
+        is_mistake: Whether this is a misclassified case
+        case_type: Type of case being displayed
+    """
+    
+    # Determine border color based on classification
+    border_color = "#ff4444" if is_mistake else "#4444ff"  # Red for mistakes, Blue for correct
+    
+    # Custom CSS for card styling
+    card_css = f"""
+    <style>
+    .patient-card-{patient_idx} {{
+        border: 3px solid {border_color};
+        border-radius: 10px;
+        padding: 20px;
+        margin: 10px 0;
+        background-color: #f8f9fa;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }}
+    .patient-header-{patient_idx} {{
+        background-color: {border_color};
+        color: white;
+        padding: 10px;
+        border-radius: 7px 7px 0 0;
+        margin: -20px -20px 15px -20px;
+        font-weight: bold;
+        text-align: center;
+    }}
+    .vital-metric {{
+        display: inline-block;
+        margin: 5px 10px;
+        padding: 5px 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        font-size: 14px;
+    }}
+    .clinical-flag {{
+        display: inline-block;
+        margin: 3px 5px;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+    }}
+    .flag-normal {{ background-color: #d4edda; color: #155724; }}
+    .flag-abnormal {{ background-color: #f8d7da; color: #721c24; }}
+    .flag-warning {{ background-color: #fff3cd; color: #856404; }}
+    </style>
+    """
+    
+    st.markdown(card_css, unsafe_allow_html=True)
+    
+    with st.container():
+        # Patient Header
+        diagnosis_status = "❌ INCORRECT" if is_mistake else "✅ CORRECT"
+        st.markdown(f"""
+        <div class="patient-header-{patient_idx}">
+            <h3 style="margin: 0; font-size: 18px;">PATIENT CASE #{patient_idx} - {case_type}</h3>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">AI Diagnosis Status: {diagnosis_status}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Main patient information
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        with col1:
+            st.markdown("**📋 Patient Information**")
+            st.markdown(f"**ID:** #{patient_idx}")
+            st.markdown(f"**Age:** {int(patient_data['age'])} years")
+            
+            # Sex interpretation
+            sex_text = "Male" if patient_data['sex'] == 1 else "Female"
+            st.markdown(f"**Sex:** {sex_text}")
+            
+            # Chest pain type interpretation
+            cp_types = ["Typical Angina", "Atypical Angina", "Non-anginal Pain", "Asymptomatic"]
+            cp_type = cp_types[int(patient_data['cp'])] if 0 <= patient_data['cp'] <= 3 else f"Type {int(patient_data['cp'])}"
+            st.markdown(f"**Chest Pain:** {cp_type}")
+        
+        with col2:
+            st.markdown("**🏥 Key Vitals & Measurements**")
+            
+            # Create vital metrics display
+            vitals_html = f"""
+            <div class="vital-metric">🩸 **BP:** {int(patient_data['trestbps'])} mmHg</div>
+            <div class="vital-metric">🧪 **Cholesterol:** {int(patient_data['chol'])} mg/dL</div>
+            <div class="vital-metric">❤️ **Max HR:** {int(patient_data['thalach'])} bpm</div>
+            <div class="vital-metric">📉 **ST Depression:** {patient_data['oldpeak']:.1f} mm</div>
+            """
+            st.markdown(vitals_html, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("**🚨 Clinical Flags**")
+            
+            # Fasting Blood Sugar
+            fbs_status = "Elevated" if patient_data['fbs'] == 1 else "Normal"
+            fbs_class = "flag-abnormal" if patient_data['fbs'] == 1 else "flag-normal"
+            st.markdown(f'<span class="clinical-flag {fbs_class}">🩸 FBS: {fbs_status}</span>', unsafe_allow_html=True)
+            
+            # Resting ECG
+            ecg_types = ["Normal", "ST-T Abnormality", "LV Hypertrophy"]
+            ecg_type = ecg_types[int(patient_data['restecg'])] if 0 <= patient_data['restecg'] <= 2 else f"Type {int(patient_data['restecg'])}"
+            ecg_class = "flag-normal" if patient_data['restecg'] == 0 else "flag-warning"
+            st.markdown(f'<span class="clinical-flag {ecg_class}">📊 ECG: {ecg_type}</span>', unsafe_allow_html=True)
+            
+            # Exercise Angina
+            exang_status = "Present" if patient_data['exang'] == 1 else "Absent"
+            exang_class = "flag-abnormal" if patient_data['exang'] == 1 else "flag-normal"
+            st.markdown(f'<span class="clinical-flag {exang_class}">🏃 Exercise Angina: {exang_status}</span>', unsafe_allow_html=True)
+        
+        # Diagnosis Comparison
+        st.divider()
+        diag_col1, diag_col2, diag_col3 = st.columns([1, 1, 1])
+        
+        with diag_col1:
+            actual_disease = "Heart Disease" if true_label == 1 else "Normal"
+            actual_color = "#ff4444" if true_label == 1 else "#44aa44"
+            st.markdown(f"""
+            <div style="text-align: center; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
+                <h4 style="margin: 0; color: #333;">ACTUAL DIAGNOSIS</h4>
+                <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: {actual_color};">
+                    {actual_disease}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with diag_col2:
+            predicted_disease = "Heart Disease" if predicted_label == 1 else "Normal"
+            predicted_color = "#ff4444" if predicted_label == 1 else "#44aa44"
+            st.markdown(f"""
+            <div style="text-align: center; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
+                <h4 style="margin: 0; color: #333;">AI PREDICTION</h4>
+                <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: {predicted_color};">
+                    {predicted_disease}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with diag_col3:
+            if is_mistake:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background-color: #ffe6e6; border-radius: 5px; border: 2px solid #ff4444;">
+                    <h4 style="margin: 0; color: #d00;">⚠️ DIAGNOSTIC ERROR</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold; color: #d00;">
+                        Requires Analysis
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background-color: #e6ffe6; border-radius: 5px; border: 2px solid #44aa44;">
+                    <h4 style="margin: 0; color: #080;">✅ CORRECT DIAGNOSIS</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold; color: #080;">
+                        Reference Case
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+
 # Main Streamlit Application
 def main():
     st.set_page_config(
@@ -188,20 +355,46 @@ def main():
             else:
                 st.info(f"🔍 Found {len(mistakes)} diagnostic discrepancies")
                 
-                # Mistake selector
+                # Initialize selected mistake if not in session state
+                if 'selected_mistake_idx' not in st.session_state:
+                    st.session_state.selected_mistake_idx = 0
+                
+                # Display patient case card for selected mistake
+                selected_mistake = mistakes[st.session_state.selected_mistake_idx]
+                patient_data = st.session_state.X_test.loc[selected_mistake['index']]
+                
+                display_patient_case_card(
+                    patient_data=patient_data,
+                    patient_idx=selected_mistake['index'],
+                    true_label=selected_mistake['true_label'],
+                    predicted_label=selected_mistake['predicted_label'],
+                    is_mistake=True,
+                    case_type="Diagnostic Discrepancy"
+                )
+                
+                # Patient selector below the card
+                st.divider()
+                st.subheader("📋 Select Patient Case")
+                
                 mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
                                  for i, m in enumerate(mistakes)]
                 
-                selected_mistake_idx = st.selectbox(
-                    "Select a diagnostic discrepancy to analyze:",
+                new_selection = st.selectbox(
+                    "Choose a diagnostic discrepancy to analyze:",
                     range(len(mistake_options)),
+                    index=st.session_state.selected_mistake_idx,
                     format_func=lambda x: mistake_options[x]
                 )
+                
+                # Update session state if selection changed
+                if new_selection != st.session_state.selected_mistake_idx:
+                    st.session_state.selected_mistake_idx = new_selection
+                    st.rerun()
                 
                 if st.button("🔬 Generate Clinical Explanation", type="primary"):
                     with st.spinner("Analyzing diagnostic discrepancy and finding correct decision path..."):
                         try:
-                            mistake = mistakes[selected_mistake_idx]
+                            mistake = mistakes[st.session_state.selected_mistake_idx]
                             
                             # Get the mistake instance first
                             X_mistake = st.session_state.X_test.loc[mistake['index']].values.reshape(1, -1)
@@ -253,6 +446,36 @@ def main():
                                     
                                     # Display results
                                     st.success("✅ Clinical explanation generated!")
+                                    
+                                    # Display both patient cases side by side
+                                    st.subheader("🏥 Patient Case Comparison")
+                                    col_case1, col_case2 = st.columns([1, 1])
+                                    
+                                    with col_case1:
+                                        st.markdown("**❌ Incorrect Diagnosis Case**")
+                                        display_patient_case_card(
+                                            patient_data=st.session_state.X_test.loc[mistake['index']],
+                                            patient_idx=mistake['index'],
+                                            true_label=mistake['true_label'],
+                                            predicted_label=mistake['predicted_label'],
+                                            is_mistake=True,
+                                            case_type="Diagnostic Error"
+                                        )
+                                    
+                                    with col_case2:
+                                        st.markdown("**✅ Correct Reference Case**")
+                                        correction_data = st.session_state.X_train.iloc[correction['index']]
+                                        # Get the model's prediction for the correction case
+                                        correction_pred = trainer.model.predict(correction_data.values.reshape(1, -1))[0]
+                                        
+                                        display_patient_case_card(
+                                            patient_data=correction_data,
+                                            patient_idx=correction['index'],
+                                            true_label=correction['true_label'],
+                                            predicted_label=correction_pred,
+                                            is_mistake=False,
+                                            case_type="Correct Diagnosis"
+                                        )
                                     
                                     # Summary section
                                     st.subheader("📝 Clinical Analysis Summary")
