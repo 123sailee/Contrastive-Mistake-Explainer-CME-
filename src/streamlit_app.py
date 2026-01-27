@@ -13,6 +13,12 @@ from plotly.subplots import make_subplots
 import sys
 import os
 import time
+from demo_config import (
+    DEMO_NARRATIVE, 
+    get_demo_patient_index, 
+    DEMO_SUCCESS_MESSAGE,
+    DEMO_CSS
+)
 
 # Add src directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -198,6 +204,16 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # Initialize demo mode session state
+    if 'demo_active' not in st.session_state:
+        st.session_state.demo_active = False
+    if 'demo_step' not in st.session_state:
+        st.session_state.demo_step = 0
+    if 'demo_patient_idx' not in st.session_state:
+        st.session_state.demo_patient_idx = None
+    if 'demo_completed' not in st.session_state:
+        st.session_state.demo_completed = False
+    
     st.title("🏥 MedGuard AI")
     st.markdown("*AI-Powered Clinical Decision Support & Failure Prevention*")
     
@@ -209,6 +225,58 @@ def main():
     max_depth = st.sidebar.slider("Max Depth", min_value=3, max_value=20, value=10, step=1)
     min_samples_split = st.sidebar.slider("Min Samples Split", min_value=2, max_value=20, value=5, step=1)
     random_state = st.sidebar.slider("Random State", min_value=0, max_value=100, value=42, step=1)
+    
+    # ========================================
+    # EXPO DEMO MODE CONTROLS
+    # ========================================
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🎬 Expo Demo Mode")
+    st.sidebar.caption("*60-second automated demonstration*")
+
+    demo_enabled = st.sidebar.checkbox(
+        "Enable Demo Mode",
+        value=st.session_state.demo_active,
+        help="Automated walkthrough showcasing MedGuard's proactive AI safety features"
+    )
+
+    if demo_enabled:
+        col1, col2 = st.sidebar.columns([2, 1])
+        
+        with col1:
+            if st.button("▶️ Start Demo", type="primary", use_container_width=True):
+                st.session_state.demo_active = True
+                st.session_state.demo_step = 0
+                st.session_state.demo_completed = False
+                
+                # Load models first
+                if st.session_state.model_trained:
+                    trainer = st.session_state.trainer
+                    y_pred = trainer.model.predict(st.session_state.X_test)
+                    
+                    # Find best demo patient
+                    st.session_state.demo_patient_idx = get_demo_patient_index(
+                        st.session_state.X_test, st.session_state.y_test, y_pred, trainer
+                    )
+                    
+                    st.rerun()
+                else:
+                    st.sidebar.error("⚠️ Please train the model first!")
+        
+        with col2:
+            if st.button("⏹️ Stop", use_container_width=True):
+                st.session_state.demo_active = False
+                st.session_state.demo_step = 0
+                st.session_state.demo_completed = False
+                st.rerun()
+        
+        if st.session_state.demo_active and not st.session_state.demo_completed:
+            progress = (st.session_state.demo_step + 1) / len(DEMO_NARRATIVE)
+            st.sidebar.progress(progress)
+            st.sidebar.caption(f"Step {st.session_state.demo_step + 1}/{len(DEMO_NARRATIVE)}")
+    else:
+        st.session_state.demo_active = False
+
+    st.sidebar.markdown("---")
     
     # Initialize session state
     if 'data_loaded' not in st.session_state:
@@ -358,13 +426,91 @@ def main():
             else:
                 st.info(f"🔍 Found {len(mistakes)} diagnostic discrepancies")
                 
-                # Initialize selected mistake if not in session state
-                if 'selected_mistake_idx' not in st.session_state:
-                    st.session_state.selected_mistake_idx = 0
-                
-                # Display patient case card for selected mistake
-                selected_mistake = mistakes[st.session_state.selected_mistake_idx]
-                patient_data = st.session_state.X_test.loc[selected_mistake['index']]
+                # ========================================
+                # PATIENT CASE SELECTION (Demo or Manual)
+                # ========================================
+
+                if st.session_state.demo_active and st.session_state.demo_patient_idx is not None:
+                    # DEMO MODE: Automated sequence
+                    st.markdown(DEMO_CSS, unsafe_allow_html=True)
+                    
+                    # Get current demo step
+                    step_data = DEMO_NARRATIVE[st.session_state.demo_step]
+                    
+                    # Demo banner
+                    st.markdown(f"""
+                    <div class='demo-banner'>
+                        <h2 style='margin: 0; color: white;'>🎬 DEMO MODE ACTIVE</h2>
+                        <h3 style='margin: 10px 0 5px 0; color: white;'>{step_data['title']}</h3>
+                        <p style='margin: 0; font-size: 14px; opacity: 0.9;'>Step {st.session_state.demo_step + 1} of {len(DEMO_NARRATIVE)}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Display step message
+                    if step_data.get('highlight'):
+                        st.success(f"### {step_data['message']}")
+                    else:
+                        st.info(step_data['message'])
+                    
+                    # Use demo patient index
+                    selected_mistake_idx = st.session_state.demo_patient_idx
+                    selected_mistake = mistakes[selected_mistake_idx]
+                    patient_data = st.session_state.X_test.loc[selected_mistake['index']]
+                    
+                    # Show loading spinner during processing steps
+                    if step_data['action'] in ['show_loading', 'trigger_cme']:
+                        with st.spinner('Processing...'):
+                            time.sleep(step_data['duration'])
+                    else:
+                        time.sleep(step_data['duration'])
+                    
+                    # Auto-advance to next step
+                    st.session_state.demo_step += 1
+                    
+                    # Check if demo complete
+                    if st.session_state.demo_step >= len(DEMO_NARRATIVE):
+                        st.balloons()
+                        st.markdown("---")
+                        st.markdown(DEMO_SUCCESS_MESSAGE)
+                        st.session_state.demo_completed = True
+                        st.session_state.demo_active = False
+                        
+                        if st.button("🔄 Reset Demo", type="primary"):
+                            st.session_state.demo_step = 0
+                            st.session_state.demo_completed = False
+                            st.rerun()
+                    else:
+                        # Continue demo
+                        st.rerun()
+
+                else:
+                    # NORMAL MODE: Manual selection
+                    st.markdown("### 🔍 Select Patient Case for Analysis")
+                    
+                    # Initialize selected mistake if not in session state
+                    if 'selected_mistake_idx' not in st.session_state:
+                        st.session_state.selected_mistake_idx = 0
+                    
+                    # Original dropdown selector
+                    mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
+                                     for i, m in enumerate(mistakes)]
+                    
+                    new_selection = st.selectbox(
+                        "Choose a diagnostic discrepancy to analyze:",
+                        range(len(mistake_options)),
+                        index=st.session_state.selected_mistake_idx,
+                        format_func=lambda x: mistake_options[x]
+                    )
+                    
+                    # Update session state if selection changed
+                    if new_selection != st.session_state.selected_mistake_idx:
+                        st.session_state.selected_mistake_idx = new_selection
+                        st.session_state.show_explanation = False  # Reset explanation when changing patient
+                        st.rerun()
+                    
+                    # Display patient case card for selected mistake
+                    selected_mistake = mistakes[st.session_state.selected_mistake_idx]
+                    patient_data = st.session_state.X_test.loc[selected_mistake['index']]
                 
                 # ========================================
                 # PROACTIVE FAILURE RISK WARNING (MedGuard Innovation)
@@ -779,26 +925,6 @@ def main():
                                 
                         except Exception as e:
                             st.error(f"❌ Error generating explanation: {str(e)}")
-                
-                # Patient selector below the analysis
-                st.divider()
-                st.subheader("📋 Select Patient Case")
-                
-                mistake_options = [f"Patient {i} (Actual: {m['true_label']}, Predicted: {m['predicted_label']})" 
-                                 for i, m in enumerate(mistakes)]
-                
-                new_selection = st.selectbox(
-                    "Choose a diagnostic discrepancy to analyze:",
-                    range(len(mistake_options)),
-                    index=st.session_state.selected_mistake_idx,
-                    format_func=lambda x: mistake_options[x]
-                )
-                
-                # Update session state if selection changed
-                if new_selection != st.session_state.selected_mistake_idx:
-                    st.session_state.selected_mistake_idx = new_selection
-                    st.session_state.show_explanation = False  # Reset explanation when changing patient
-                    st.rerun()
     
     with tab3:
         st.header("📈 Performance Metrics")
