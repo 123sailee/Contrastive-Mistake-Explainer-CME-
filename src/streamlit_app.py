@@ -1056,7 +1056,7 @@ def main():
                         st.info(f"✓ **LOW FAILURE RISK** ({risk_score:.1%})")
                         st.markdown("**✓ NORMAL**: AI decision likely reliable. Standard clinical review recommended.")
                     
-                    # Risk visualization
+                    # Risk visualization with animated gauge
                     col1, col2 = st.columns([1, 2])
                     
                     with col1:
@@ -1072,16 +1072,84 @@ def main():
                         )
                     
                     with col2:
-                        # Colored progress bar
+                        # Animated risk gauge using Plotly
+                        fig = go.Figure()
+                        
+                        # Determine gauge colors based on risk level
                         if risk_level == "HIGH":
-                            st.markdown("**Risk Level:** 🔴 HIGH (>70%)")
-                            st.progress(risk_score)
+                            gauge_color = 'red'
+                            threshold_color = 'darkred'
+                            risk_text = "HIGH RISK"
+                            risk_emoji = "🚨"
                         elif risk_level == "MEDIUM":
-                            st.markdown("**Risk Level:** 🟠 MEDIUM (40-70%)")
-                            st.progress(risk_score)
+                            gauge_color = 'orange'
+                            threshold_color = 'darkorange'
+                            risk_text = "MODERATE RISK"
+                            risk_emoji = "⚡"
                         else:
-                            st.markdown("**Risk Level:** 🟢 LOW (<40%)")
-                            st.progress(risk_score)
+                            gauge_color = 'green'
+                            threshold_color = 'darkgreen'
+                            risk_text = "LOW RISK"
+                            risk_emoji = "✅"
+                        
+                        # Create animated gauge
+                        fig.add_trace(go.Indicator(
+                            mode = "gauge+number+delta",
+                            value = risk_score * 100,
+                            domain = {'x': [0, 1], 'y': [0, 1]},
+                            title = {'text': f"{risk_emoji} {risk_text}"},
+                            delta = {'reference': 50},
+                            gauge = {
+                                'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                                'bar': {'color': gauge_color},
+                                'bgcolor': "white",
+                                'borderwidth': 2,
+                                'bordercolor': "gray",
+                                'steps': [
+                                    {'range': [0, 40], 'color': "lightgreen"},
+                                    {'range': [40, 70], 'color': "yellow"},
+                                    {'range': [70, 100], 'color': "lightcoral"}
+                                ],
+                                'threshold': {
+                                    'line': {'color': threshold_color, 'width': 4},
+                                    'thickness': 0.75,
+                                    'value': 70
+                                }
+                            }
+                        ))
+                        
+                        # Add animation for demo mode
+                        if st.session_state.demo_active and st.session_state.demo_step >= 2:
+                            # Animate from 0 to actual risk score
+                            fig.update_layout(
+                                transition=dict(duration=1500, easing="cubic-in-out"),
+                                updatemenus=[dict(
+                                    type="buttons",
+                                    buttons=[dict(
+                                        label="Animate Risk",
+                                        method="animate",
+                                        args=[None, {"frame": {"duration": 1500, "redraw": True}, "fromcurrent": True}]
+                                    )]
+                                )]
+                            )
+                        
+                        # Update layout for better appearance
+                        fig.update_layout(
+                            height=300,
+                            margin=dict(l=20, r=20, t=40, b=20),
+                            font=dict(color="darkblue", size=14)
+                        )
+                        
+                        # Display the gauge
+                        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                        
+                        # Add risk level explanation below gauge
+                        if risk_level == "HIGH":
+                            st.markdown("**🔴 HIGH RISK (>70%)**: Immediate verification required")
+                        elif risk_level == "MEDIUM":
+                            st.markdown("**🟡 MODERATE RISK (40-70%)**: Careful review recommended")
+                        else:
+                            st.markdown("**🟢 LOW RISK (<40%)**: Standard clinical review")
                     
                     # Risk factors explanation
                     with st.expander("🔍 What Triggered This Warning?"):
