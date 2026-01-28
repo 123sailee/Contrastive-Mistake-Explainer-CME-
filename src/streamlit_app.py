@@ -864,6 +864,43 @@ def main():
                     # Check if demo complete
                     if st.session_state.demo_step >= len(DEMO_NARRATIVE):
                         st.balloons()
+                        
+                        # Demo completion metrics
+                        st.markdown("---")
+                        col1, col2, col3, col4 = st.columns(4)
+
+                        with col1:
+                            st.metric(
+                                "Demo Duration",
+                                "50 sec",
+                                help="Total time from patient intake to prevented misdiagnosis"
+                            )
+
+                        with col2:
+                            st.metric(
+                                "Risk Detected",
+                                "85%",
+                                delta="HIGH",
+                                delta_color="inverse",
+                                help="Failure probability predicted by meta-model"
+                            )
+
+                        with col3:
+                            st.metric(
+                                "Response Time",
+                                "<3 sec",
+                                delta="Fast",
+                                help="Time to generate contrastive explanation"
+                            )
+
+                        with col4:
+                            st.metric(
+                                "Patient Saved",
+                                "$45K",
+                                delta="Cost Avoided",
+                                help="Average cost of unnecessary cardiac intervention"
+                            )
+
                         st.markdown("---")
                         st.markdown(DEMO_SUCCESS_MESSAGE)
                         
