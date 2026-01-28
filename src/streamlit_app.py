@@ -13,6 +13,8 @@ from plotly.subplots import make_subplots
 import sys
 import os
 import time
+import pickle
+import psutil
 from demo_config import (
     DEMO_NARRATIVE, 
     get_demo_patient_index, 
@@ -26,6 +28,71 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data_loader import load_heart_disease
 from model_trainer import ModelTrainer, find_nearest_correct_example
 from cme_explainer import CMEExplainer
+
+# ========================================
+# PERFORMANCE OPTIMIZATION: Caching
+# ========================================
+
+@st.cache_resource
+def load_trained_model():
+    """Cache model loading to avoid repeated I/O"""
+    try:
+        return ModelTrainer.load_model()
+    except FileNotFoundError:
+        st.error("⚠️ Model not found. Please run training first.")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error loading model: {str(e)}")
+        return None
+
+@st.cache_resource
+def load_risk_predictor_cached():
+    """Cache risk predictor loading"""
+    try:
+        return ModelTrainer.load_risk_predictor()
+    except FileNotFoundError:
+        st.error("⚠️ Risk predictor not found. Please run training first.")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error loading risk predictor: {str(e)}")
+        return None
+
+@st.cache_data
+def load_dataset_cached():
+    """Cache dataset loading"""
+    try:
+        return load_heart_disease()
+    except FileNotFoundError:
+        st.error("⚠️ Dataset not found. Please ensure data files are present.")
+        return None
+    except Exception as e:
+        st.error(f"❌ Error loading dataset: {str(e)}")
+        return None
+
+@st.cache_resource
+def load_shap_explainer_cached(trainer):
+    """Cache SHAP explainer initialization"""
+    try:
+        with open('models/shap_cache.pkl', 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        # Create and cache explainer if not exists
+        if trainer and hasattr(trainer, 'model'):
+            explainer = CMEExplainer(
+                trainer.model,
+                trainer.X_train if hasattr(trainer, 'X_train') else None,
+                trainer.feature_names if hasattr(trainer, 'feature_names') else None
+            )
+            try:
+                with open('models/shap_cache.pkl', 'wb') as f:
+                    pickle.dump(explainer, f)
+            except Exception as e:
+                st.warning(f"⚠️ Could not cache SHAP explainer: {str(e)}")
+            return explainer
+        return None
+    except Exception as e:
+        st.error(f"❌ Error loading SHAP explainer: {str(e)}")
+        return None
 
 
 def display_patient_case_card(patient_data, patient_idx, true_label, predicted_label, is_mistake=True, case_type="Diagnostic Discrepancy"):
@@ -204,6 +271,58 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # ========================================
+    # STARTUP HEALTH CHECK
+    # ========================================
+    with st.spinner("🔄 Initializing MedGuard AI System..."):
+        # Check required files
+        required_files = [
+            'models/primary_model.pkl',
+            'models/risk_predictor.pkl',
+            'data/heart_disease.csv'
+        ]
+        
+        missing_files = [f for f in required_files if not os.path.exists(f)]
+        
+        if missing_files:
+            st.error(f"""
+            ⚠️ **Missing Required Files:**
+            
+            {chr(10).join(f'- {f}' for f in missing_files)}
+            
+            **Action Required**: Run model training first:
+            ```bash
+            python src/model_trainer.py
+            ```
+            """)
+            st.stop()
+
+    # Pre-load all models for smooth demo performance
+    _ = load_trained_model()
+    _ = load_risk_predictor_cached()
+    _ = load_dataset_cached()
+    
+    # ========================================
+    # OFFLINE MODE OPTIMIZATION
+    # ========================================
+    # Disable external API calls and ensure offline operation
+    st.markdown("""
+    <style>
+    .offline-indicator {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 9999;
+    }
+    </style>
+    <div class="offline-indicator">🔒 Offline Mode</div>
+    """, unsafe_allow_html=True)
+    
     # Initialize demo mode session state
     if 'demo_active' not in st.session_state:
         st.session_state.demo_active = False
@@ -276,6 +395,33 @@ def main():
     else:
         st.session_state.demo_active = False
 
+    # ========================================
+    # PERFORMANCE MONITORING (Debug Mode)
+    # ========================================
+    if st.sidebar.checkbox("🔧 Show Performance Metrics", value=False):
+        import time as time_module
+        start_time = time_module.time()
+        
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 📊 Performance Metrics")
+        
+        # Cache status
+        st.sidebar.caption("🗄️ Cache Status:")
+        try:
+            st.sidebar.caption(f"• Model: {'✅ Cached' if load_trained_model() else '❌ Not Loaded'}")
+            st.sidebar.caption(f"• Risk Predictor: {'✅ Cached' if load_risk_predictor_cached() else '❌ Not Loaded'}")
+            st.sidebar.caption(f"• Dataset: {'✅ Cached' if load_dataset_cached() else '❌ Not Loaded'}")
+        except:
+            st.sidebar.caption("• Cache check failed")
+        
+        # System status
+        st.sidebar.caption("🖥️ System Status:")
+        st.sidebar.caption(f"• Memory: {psutil.virtual_memory().percent:.1f}%")
+        st.sidebar.caption(f"• CPU: {psutil.cpu_percent():.1f}%")
+        
+        # Page load time will be shown at the end
+        st.session_state.performance_start = start_time
+    
     st.sidebar.markdown("---")
     
     # Initialize session state
@@ -300,8 +446,13 @@ def main():
             if st.button("🚀 Load Patient Dataset", type="primary"):
                 with st.spinner("Loading and preprocessing data..."):
                     try:
-                        # Load and preprocess data
-                        X_train, X_test, y_train, y_test, feature_names, scaler, feature_descriptions = load_heart_disease()
+                        # Load and preprocess data using cached version
+                        data_result = load_dataset_cached()
+                        if data_result is None:
+                            st.error("❌ Failed to load dataset. Please check data files.")
+                            st.stop()
+                        
+                        X_train, X_test, y_train, y_test, feature_names, scaler, feature_descriptions = data_result
                         
                         # Create a processed dataframe for display
                         processed_data = pd.concat([X_train, X_test])
@@ -689,9 +840,23 @@ def main():
                     # Show loading spinner during processing steps
                     if step_data['action'] in ['show_loading', 'trigger_cme']:
                         with st.spinner('Processing...'):
-                            time.sleep(step_data['duration'])
+                            # Show progress for longer steps
+                            if step_data['duration'] > 2:
+                                progress_bar = st.progress(0)
+                                for i in range(100):
+                                    time.sleep(step_data['duration'] / 100)
+                                    progress_bar.progress(i + 1)
+                            else:
+                                time.sleep(step_data['duration'])
                     else:
-                        time.sleep(step_data['duration'])
+                        # Show progress for longer steps
+                        if step_data['duration'] > 2:
+                            progress_bar = st.progress(0)
+                            for i in range(100):
+                                time.sleep(step_data['duration'] / 100)
+                                progress_bar.progress(i + 1)
+                        else:
+                            time.sleep(step_data['duration'])
                     
                     # Auto-advance to next step
                     st.session_state.demo_step += 1
@@ -762,9 +927,8 @@ def main():
                 st.markdown("---")
                 st.markdown("### 🎯 MedGuard Proactive Safety Check")
                 
-                # Load risk predictor
-                from model_trainer import ModelTrainer
-                risk_predictor = ModelTrainer.load_risk_predictor()
+                # Load risk predictor using cached version
+                risk_predictor = load_risk_predictor_cached()
                 
                 if risk_predictor is not None:
                     # Get prediction probabilities for this case
@@ -1392,8 +1556,8 @@ def main():
             st.subheader("🎯 Failure Risk Predictor Validation")
             st.markdown("**Verification that MedGuard's proactive warning system actually works**")
             
-            from model_trainer import ModelTrainer
-            risk_predictor = ModelTrainer.load_risk_predictor()
+            # Load risk predictor using cached version
+            risk_predictor = load_risk_predictor_cached()
             
             if risk_predictor is not None:
                 # Compute risk predictions for all test cases
@@ -1513,6 +1677,15 @@ def main():
                 st.markdown(" actually works - it's not random guessing!")
             else:
                 st.warning("⚠️ Risk predictor not trained yet. Run model training to enable calibration analysis.")
+
+    # ========================================
+    # PERFORMANCE MONITORING COMPLETION
+    # ========================================
+    if 'performance_start' in st.session_state:
+        import time as time_module
+        elapsed = time_module.time() - st.session_state.performance_start
+        st.sidebar.caption(f"⏱️ Page load: {elapsed:.2f}s")
+        del st.session_state.performance_start
 
 
 if __name__ == "__main__":
