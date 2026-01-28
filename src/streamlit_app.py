@@ -15,6 +15,7 @@ import os
 import time
 import pickle
 import psutil
+from datetime import datetime
 from demo_config import (
     DEMO_NARRATIVE, 
     get_demo_patient_index, 
@@ -28,6 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data_loader import load_heart_disease
 from model_trainer import ModelTrainer, find_nearest_correct_example
 from cme_explainer import CMEExplainer
+from pdf_report_generator import PDFReportGenerator
 
 # ========================================
 # PERFORMANCE OPTIMIZATION: Caching
@@ -1627,6 +1629,59 @@ def main():
                                             st.error("🚨 Case reported to MedGuard Safety Team.")
                                             st.info("Report ID: MG-" + str(mistake['index']) + "-" + str(int(time.time())))
                                             st.success("Safety team will review this diagnostic failure within 24 hours.")
+                                    
+                                    # PDF Download Section
+                                    st.divider()
+                                    st.markdown("### 📄 Export Analysis Report")
+                                    
+                                    col_pdf1, col_pdf2 = st.columns([2, 1])
+                                    
+                                    with col_pdf1:
+                                        st.markdown("**Download comprehensive PDF report for documentation and review**")
+                                        st.markdown("*Includes patient data, risk assessment, SHAP analysis, and clinical recommendations*")
+                                    
+                                    with col_pdf2:
+                                        if st.button("📥 Download PDF Report", type="primary", use_container_width=True):
+                                            try:
+                                                # Generate PDF report
+                                                pdf_generator = PDFReportGenerator()
+                                                
+                                                # Get patient data for the report
+                                                patient_data_dict = st.session_state.X_test.loc[mistake['index']].to_dict()
+                                                
+                                                # Get risk assessment data
+                                                risk_score = risk_predictor.predict_risk(X_mistake, trainer.model.predict_proba(X_mistake))
+                                                risk_level = risk_predictor.get_risk_level(risk_score)
+                                                risk_factors = risk_predictor.get_risk_factors(X_mistake, trainer.model.predict_proba(X_mistake))
+                                                
+                                                # Generate PDF
+                                                pdf_bytes = pdf_generator.generate_failure_analysis_report(
+                                                    patient_data=patient_data_dict,
+                                                    selected_mistake=mistake,
+                                                    risk_score=risk_score,
+                                                    risk_level=risk_level,
+                                                    risk_factors=risk_factors,
+                                                    correctability_score=correctability_score,
+                                                    shap_values_mistake=shap_mistake,
+                                                    shap_values_correct=shap_correction,
+                                                    feature_names=feature_names
+                                                )
+                                                
+                                                # Create download button
+                                                st.download_button(
+                                                    label="📄 Save PDF Report",
+                                                    data=pdf_bytes,
+                                                    file_name=f"MedGuard_Analysis_Report_Case_{mistake['index']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                                                    mime="application/pdf",
+                                                    type="primary",
+                                                    use_container_width=True
+                                                )
+                                                
+                                                st.success("✅ PDF report generated successfully!")
+                                                
+                                            except Exception as e:
+                                                st.error(f"❌ Error generating PDF report: {str(e)}")
+                                                st.info("Please try again or contact support if the issue persists.")
                                     
                                 except Exception as e:
                                     st.error(f"❌ Error generating explanation: {str(e)}")
