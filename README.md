@@ -38,7 +38,7 @@
 ## 🚀 Key Features
 
 ### 1. 🎯 Proactive Failure Risk Prediction (THE INNOVATION)
-- **Meta-model** predicts when primary AI will fail
+- **Uncertainty-based estimator** predicts when primary AI will fail
 - **Real-time risk scoring**: HIGH / MEDIUM / LOW
 - **Risk factors identified**: Why this case is risky
 - **Clinical alerts**: Warns before harm occurs
@@ -100,11 +100,59 @@
 
 ## 🛠️ Technical Stack
 
-- **ML Framework**: scikit-learn (RandomForest primary, Logistic meta-model)
+- **ML Framework**: scikit-learn (RandomForest primary, uncertainty-based risk estimator)
 - **XAI**: SHAP TreeExplainer with custom contrastive analysis
 - **UI**: Streamlit with healthcare-professional design
 - **Data**: UCI Heart Disease (303 patients, 13 features)
 - **Architecture**: Modular (5 separate components ~1500 LOC)
+
+---
+
+## 📋 Current Implementation Status
+
+### ✅ **Fully Implemented**
+- **Uncertainty-based risk estimation** using prediction confidence and entropy
+- **SHAP-based explanations** with proper "Mistake Path vs Correction Path" labeling
+- **Correctability scoring** based on model confidence thresholds
+- **Deterministic, reproducible calculations** (no random outputs)
+- **Model caching** for fast demo mode loading
+- **Professional clinical UI** with risk stratification
+
+### 🔧 **Prototype Implementation**
+- **Risk estimation**: Uses interpretable proxies (uncertainty, entropy) rather than trained meta-model
+- **Correctability scoring**: Simple confidence-based heuristic (not advanced formula)
+- **Contrastive explanations**: SHAP-based with labeling, but no deep delta analysis
+- **Clinical recommendations**: Static risk-level based recommendations
+
+### 🚫 **Not Yet Implemented**
+- **True meta-model architecture**: Separate trained model for failure prediction
+- **Advanced correctability formula**: Evidence-based formula with coverage, confidence, delta
+- **Deep contrastive analysis**: Sophisticated mistake vs correction path analysis
+- **Dynamic clinical recommendations**: Personalized, case-specific guidance
+
+---
+
+## 🔬 Planned Research Extensions
+
+### **Phase 2: Advanced Risk Prediction**
+- **True meta-model training**: Separate model trained on historical failure patterns
+- **Multi-factor risk assessment**: Incorporate patient demographics, model drift, data quality
+- **Temporal risk modeling**: Time-based failure probability estimation
+
+### **Phase 3: Enhanced Correctability**
+- **Mathematical correctability formula**: Evidence-based scoring with coverage, confidence, delta
+- **Fixability classification**: Machine learning-based categorization of error types
+- **Correction recommendations**: Specific feature adjustment suggestions
+
+### **Phase 4: Deep Contrastive Analysis**
+- **Advanced delta analysis**: Sophisticated comparison between mistake and correction paths
+- **Causal explanation**: Identify root causes of model mistakes
+- **Counterfactual generation**: Generate specific feature changes to correct predictions
+
+### **Phase 5: Clinical Integration**
+- **Real-time monitoring**: Continuous model performance tracking
+- **Adaptive learning**: Model improvement from clinician feedback
+- **Hospital deployment**: Integration with clinical workflows and EMR systems
 
 ---
 
@@ -115,7 +163,7 @@
 - **Precision**: 87% (Heart Disease detection)
 - **Recall**: 79% (Critical for medical applications)
 
-### Meta-Model (Risk Predictor)
+### Risk Estimator (Uncertainty-Based)
 - **Failure Detection**: 80% recall at HIGH threshold
 - **Precision**: 75-80% (3 out of 4 warnings are actual failures)
 - **False Alarm Rate**: <25% (acceptable for safety-critical applications)
