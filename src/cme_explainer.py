@@ -61,12 +61,16 @@ class CMEExplainer:
         # For binary classification, SHAP returns values for both classes
         # We want the values for the predicted class (class 1)
         if isinstance(shap_values, list):
-            shap_values = shap_values[1]  # Class 1 (disease present)
+            shap_values = shap_values[1]           # Old SHAP: list of arrays per class
+        elif shap_values.ndim == 3:
+            shap_values = shap_values[:, :, 1]     # New SHAP: shape (samples, features, classes)
         
         # Get base value
         base_value = self.explainer.expected_value
         if isinstance(base_value, list):
             base_value = base_value[1]
+        elif hasattr(base_value, '__len__') and len(base_value) > 1:
+            base_value = base_value[1]             # New SHAP: numpy array of per-class base values
         
         return shap_values[0], base_value
     
@@ -325,6 +329,8 @@ class CMEExplainer:
             # For binary classification, extract class 1 values
             if isinstance(batch_shap, list):
                 batch_shap = batch_shap[1]
+            elif batch_shap.ndim == 3:
+                batch_shap = batch_shap[:, :, 1]      # New SHAP: shape (samples, features, classes)
 
             all_shap_values.append(batch_shap)
             print(f"[OK] Batch {batch_idx + 1}/{n_batches} complete ({end_idx}/{n_samples} total samples)")
@@ -335,9 +341,12 @@ class CMEExplainer:
         print(f"[OK] Combined shape: {shap_values.shape}")
 
         # Cache structure
+        ev = self.explainer.expected_value
+        base_val = ev[1] if (isinstance(ev, list) or (hasattr(ev, '__len__') and len(ev) > 1)) else ev
+        
         cache = {
             'shap_values': shap_values,
-            'base_value': self.explainer.expected_value[1] if isinstance(self.explainer.expected_value, list) else self.explainer.expected_value,
+            'base_value': base_val,
             'feature_names': self.feature_names,
             'indices': X_test.index.tolist() if hasattr(X_test, 'index') else list(range(len(X_test)))
         }
